@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Mouse-Attack</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+
+<body>
+    <div class="game-view">
+        <div class="start-screen">Start game</div>
+        <div class="score-screen">0 pts.</div>
+        <div class="play-screen hidden">
+            <div class="x1"><div class="cloud"></div>
+            <div class="x2"><div class="cloud"></div>
+            <div class="x3"><div class="cloud"></div>
+            <div class="x4"><div class="cloud"></div>
+            <div class="x5"><div class="cloud"></div>
+            
+
+            </div>
+        </div>
+
+    </div>
+    <script src="./gameState.js"></script>
+    <script src="./gameFactory.js"></script>
+    <script>
+        'use strict';
+       
+        
+        let game = gameFactory();
+
+        game.startScreen.addEventListener('click', () => {
+            game.startScreen.classList.add('hidden');
+            game.playScreen.classList.remove('hidden');
+            window.requestAnimationFrame(gameLoop);
+        })
+        document.addEventListener('keydown', onKeyDown);
+        document.addEventListener('keyup', onKeyUp);
+
+        function gameLoop(timestamp) {
+
+            let { mouse } = state;
+            let { mouseElement, scoreScreen } = game;
+            modificationPositionMouse(mouse, game);
+
+            //fire
+            if (state.keys.Space) {
+
+                mouseElement.style.backgroundImage = "url('./images/2.png')";
+                mouseElement.backgroundPosition = 'center';
+                mouseElement.backgroundRepeat = 'no-repeat';
+                mouseElement.backgroundSize = 'cover';
+                if(state.appleStates.nextAppleToAttackCreation< timestamp){
+                    game.createAppleAttack();
+                    state.appleStates.nextAppleToAttackCreation= timestamp+ state.appleStates.attackSpeed;
+                }
+                
+            }
+            else {
+                mouseElement.style.backgroundImage = "url('./images/1.png')";
+            }
+
+            //move apple
+            Array.from(document.querySelectorAll('.apple')).forEach(apple=>{
+                let currposition = parseInt(apple.style.left);
+
+                if (currposition + state.appleStates.width < game.playScreen.offsetWidth) {
+                    apple.style.left = currposition + state.appleStates.speed + 'px';
+                }
+                else {
+                    apple.remove();
+                }
+                Array.from(document.querySelectorAll('.snake')).forEach(snake=>{
+                   
+                    if (checkColision(apple,snake)) {
+                    snake.remove();
+                    
+                    state.score+=state.snakeStates.score;
+                    apple.remove();
+                }
+                })
+                
+            })
+
+
+            //move snakes
+            Array.from(document.querySelectorAll('.snake')).forEach(x => {
+                let currposition = parseInt(x.style.left);
+
+                if (currposition > 0) {
+                    x.style.left = currposition - state.snakeStates.speed + 'px';
+                }
+                else {
+                    x.remove();
+                }
+                if (checkColision(mouseElement, x)) {
+                    state.gemeOver = true;
+                }
+            })
+
+            if (state.snakeStates.nextSnakeCreation < timestamp) {
+                game.createSnake();
+
+                state.snakeStates.nextSnakeCreation = timestamp + (Math.random() * state.snakeStates.maxCreationInterval);
+            }
+            //faster
+            state.snakeStates.speed += 0.0001;
+
+            //Render
+
+            mouseElement.style.top = mouse.y + 'px';
+            mouseElement.style.left = mouse.x + 'px';
+            scoreScreen.textContent = state.score + 'pts.'
+            if (!state.gemeOver) {
+                state.score += 1;
+                window.requestAnimationFrame(gameLoop);
+            }
+            else {
+                alert('Game over!')
+            }
+
+        }
+        function modificationPositionMouse(mouse, game) {
+            let mouseElement = game.mouseElement;
+            let isLowerBound=mouse.y + mouse.height >= game.playScreen.offsetHeight;
+            if(!isLowerBound){
+                mouse.y += mouse.gravity;
+            }
+            if (state.keys.KeyW && mouse.y > 0) {
+                mouse.y -= mouse.speed;
+            }
+            if (state.keys.KeyS &&  !isLowerBound) {
+                mouse.y += mouse.speed;
+            }
+            if (state.keys.KeyA && mouse.x > 0) {
+                mouse.x -= mouse.speed;
+            }
+            if (state.keys.KeyD && mouse.x + mouse.width < game.playScreen.offsetWidth) {
+                mouse.x += mouse.speed;
+            }
+        }
+        function checkColision(firstElement, secondElement) {
+            let firstrec = firstElement.getBoundingClientRect();
+            let secondRect = secondElement.getBoundingClientRect();
+
+            return (!(firstrec.top > secondRect.bottom || firstrec.bottom < secondRect.top || firstrec.left > secondRect.right || firstrec.right < secondRect.left));
+
+        }
+
+        function onKeyDown(evt) {
+            evt.preventDefault();
+            state.keys[evt.code] = true;
+            
+        }
+        function onKeyUp(evt) {
+            state.keys[evt.code] = false;
+        }
+    </script>
+</body>
+
+</html>
